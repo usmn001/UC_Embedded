@@ -1,0 +1,432 @@
+-------------------------------------------Week1-------------------------------------------
+
+
+As Embedded Software Engineers we intend to maximize software portability and reliability.
+
+It´s impossible to make everything Architecture Independent,
+   As Firmware Layers still interact with hardware.
+   Assembly is Architecture Dependent.
+
+A Embedded Software Engineer needs to know how our code is moved in between CPU & Memory, 
+How is stack implemented in a certain architecture.
+
+Embedded Application Binary Interface (EABI) provides details on how a binary must be compiled
+and interfaced with platform compoenents such as : 
+Registers Use :
+Word Size : Defines Operand Size Of The Instruction Set Architecture. 
+Code/Data Storage Rrquirements : How Large is instruction,Data Types, Alignment. 
+Addressing Modes : Register Addressing,Direct & Indirect.
+Calling Conventions : How stack is managed, routines are called, data is passed/returned,saved staate.
+Helper Functions & Libraries : More complex software operations, Floating Point match, C-standard Library.
+                               Helper functions may implement functionality through software which is not
+                               available to us in Hardware and ISA like for e.g. floating point support.
+
+----------------Lec 2 : Word Size, Data Types----------------
+
+
+In ARM Cortex M Microcontrollers word size is of 32 Bits meaning the CPU has 32 Bit size registers.
+ARM Cortex M Instruction Set Architecture may have specific support for our 8-Bit, 16-Bit or 64 Bit Operations.
+
+ARM has a lot of buses such as Internal System Bus ( ARM AHB) and External Peripheral Bus (APB).
+
+The  Bus width does not neccesarily have to be the size of word.
+A bus will contain both data bits,control bits,address bits.
+
+Besides uint8_t,uint16_t,uint32_t, uint64_t, int8_t,int16_t,int32_t,int64_t types defined in stdint.h header file we also have 
+uint_fast8_t,uint_fast16_t,uint_fast32_t,uint_fast64_t, 
+int_fast8_t,int_fast16_t,int_fast32_t,int_fast64_t,           fast types indicate that data should be represented in a way that access 
+                                                              and use of this data should occur as fast as possible in a architecture with 
+                                                              at least n defined bits. However to have fast access it´s size can be increased to
+                                                              the size of processor.                          
+                                                              
+
+uint_least8_t,uint_least16_t,uint_least32_t,uint_least64_t,   
+int_least8_t,int_least16_t,int_least32_t,int_least64_t,       least types indicate that at least specific n bits should be   
+                                                              assigned to the type.
+
+We can also use typedef keyword to crete our own custom type names.
+
+
+--------------------------Lec 3 : Pointers--------------------------
+
+ARM Cortex M Architecture has a 32 Bit Pointer meaning a pointer can pointer in the entire address space i.e 2^32  
+     When we declare a pointer with syntax i.e. type * ptr; 
+                                                type indicates what kind of data type pointer is pointing to
+                                                as pointers don´t have any type by themselves.
+                                                Size of a pointer is equal to word size of the architecture.
+     Whenever we dereference a pointer then we access value pointed by the address placed in pointer. As pointers memory hold 
+     addresses not any values.
+
+We can also directly address to a pointer like for e.g. address of a variable i.e. 
+                              uint8_t * ptr = (uint8_t*)0x00023;  // While we have casted the value pointed out by address as 8 Bits. Here we´ve assigned address 0x00023 to pointer ptr and make sure by casting that we just only access 8 bits at that memory location and those 8 bits are of unsigned integer data type.                                            
+                                                                  // As our pointer can point to a 8 bit unsigned 8 bit value.
+
+                              uint32_t * ptr2 =(uint8_t*)0x00024 ; // Now we are accessing only 8 bits out of n bits stored at Address 0x00024                            
+                              
+ 
+typedef struct Person {
+char *name;
+ uint8_t age;
+}Person_t;       // Name of this structure is Person_t, While we have created new type Person while assigning a new name(alias) to struct
+                 // To access struct members in src file we do : Person_t p1, *ptr_p1;
+                                                                 ptr_p1= &p1;
+                                                                 ptr_p1->age=10; 
+
+---------------------Lec 4 : Interacting With Memory-------------------------------
+
+As we know in an embedded system a part from external peripheral memory inside a MCU we have three kinds of memories : 
+
+Data Memory In SRAM  (Static Random Memory Type Of RAM)
+Code Memory In Flash (ROM)
+Register Memory.
+
+In a microcontroller every peripheral controller has it´s own register memory controlling and providing the interaction in between the CPU and external pripheral units connected to
+a certain peripheral interface(I2C, SPI,USB,UART e.t.c.)
+
+We cannot access CPU registers directly through our C programming instead we need to use inline Assembly code mixed with C code for accessing these internal CPU registers.
+
+Load and store Assembly instructions enable loading of data from RAM to CPU registers and store instruction for storing processed data back into RAM, this process is known as 
+read, write and modify.
+
+Compiler will try to minimize Load and Store operation overhead through type qualifiers such as restric,register and maybe volatile.
+
+---------Bit Banded Regions--------
+
+ARM Architecture provides Bit Banded Regions in the address space of (peripheral or SRAM) enabling one to perform bit-level loads and stores as each address will map to a certain bit.
+Bit Banded Memory operations are good for avoiding race conditions that could be introduced by read-write modify operations.
+Bit Banded operations are atomic and handled in Hardware, No CPU Load/Store instruction is involved.
+
+-------ARM Cortex M Buses-----------
+
+ARM provides AMBA (Advance Microcontroller Bus Architecture).
+In ARM architecture our bus width is of 32 Bits and AMBA architecture allows this bus width to vary it´s size.
+
+In AMBA (Advance Microcontroller Bus Architecture) we have several buses such as : 
+AHB System Bus.
+APB Periperhal Bus.
+AHB Flash D-Code Bus.
+AHB Flash I-Code Bus.
+
+AHB (Advanced High Performance Bus) providing Fast/High Bandwidth Interfaces.
+Private Cortex M4 Buses are : Internal Private Peripheral Bus (PPB) for SCB,NVIC,MPU.
+                              External Private Peripheral Bus (PPB) for external debugging. 
+
+AHB External Core Buses :  System Bus (AHB-Lite) for SRAM, High Speed Peripherals, Peripheral Bridge.
+                           Flash Buses : I-Code Bus (For Code Memory) 
+                                         D-Code Bus ( For Data Memory ) 
+
+APB Advanced Peripheral Bus : Not Directly Connected To CPU But Through A Bridge   
+                              This is a low bandwidth Bus for Communication Block,I/O Interfaces : UART,SPI,I2C,ADC, Timers e.t.c.
+                              
+
+-----------------Lec 5 : Memory Alignment-------------------
+
+
+Structres are high level constructs independent of underlying hardware architecture.
+
+The underlying ISA provides us three types of Load/Store Instructions these are : Byte,Half-Word and Word Load stores instructions.
+
+The load/store instructions for Byte,Halfword,word are designed work on specific memory alignments i.e. they can work on certain addresses efficiently. 
+
+Memory Alignment will have effects on both CPU and Memory Efficiency.
+
+Unused Memory is used to pad empty memory spots(bytes are added/stuffed) until the data type can be aligned. Extra padded bytes are known as padding and this phenomenon in terms of 
+C programming is called Structure padding.
+
+Unaligned memory without padding will force the CPU to do more work to access data at addresses but will pack more data efficiently.
+
+Bytes can be stored at any address in memory and are always aligned.
+
+Half words, words, double words require certain address alignment : Words Need to be aligned at four bytes Boundaries(Addresses with 0x00 &0x04), Can pad maximum of three bytes.
+                                                                    Doble words must aligned at eight byte boundaries or addresses end with (0x00,0x08)...
+                                                                    Half Words Can only be stored at even addresses, (0x00,0x02..) thus will require one extra padded byte.
+
+Instructions in ARM Cortex M Architecture can vary from 16 to 32 bits and are forced to be aligned at least a half word boundary and cannot support unaligned accesses. So if we
+have a 16 bit instruction for storing 16 bits of data at word location and another 32 bit instruction for 32 bit data at 32 bit location then extra 16 bits will be added to the 
+data stored using 16 bit instruction because we cannot have half word in remaining upper 16 bits and the other half in lower 16 bits as it does not support load/store instructions directly. The CPU will be doing multile loads and stores just to combine upper and lower half words into a single location and then perform operation on that word.
+
+Memory alignment is useful if we want to have our program execute efficiently with fewer CPU cycles .
+For Unaligned Memory when we want to pack data in order to reduce memory (Code Memory) consumption then we will be having multiple loads and stores operations in CPU decreasing execution speed of our program . 
+
+---------------------Lec 6 : Endianness---------------
+
+Endianness defines byte order of data in a computer system memory (Code, Data Memories ) .
+
+There are two types of Endianess : 
+Big Endian : Most Significant Byte is stored first in Memory i.e. at Lowest Address in Memroy.
+Little Endian : Least Significant Byte is stored first in Memory i.e. at Lowest Address in Memory.
+                                                                     
+Endianness does not affect order of elements of an array and structure, it only impacts the bytes of individual elements.
+
+Example : uint16_t arr[3] = {0x1201,0x1302}; // Here according to Big Endian MSB Byte 0x12 will be stored first in memory at
+                                                lowest address and then byte 01 and same goes for bytes 0x1302
+
+                                                                     Big Endian        Little Endian 
+                                               Memory Address        Element              Element 
+                                                 0x0001               0x12                  0x01
+                                                 0x0002               0x01                  0x12
+                                                 0x0003               0x13                  0x02
+                                                 0x0004               0x02                  0x13
+
+Some systems cannot be configured for a certain endianness order however ARM Architecture originally a Big Ednian Archtecture
+allows us to change it´s endianness by resetting the processor.
+ARM data Memory Endianness can be changed , Code Memory is Little Endian and it´s Endianness cannot be changed.
+
+To change the ARM Endianness for data memory we need to set/unset Bit15 of AIRCR(Application Inteerupt & Reset Control Register).  Bit15 = 0 for Little Endian , Bit15=1 for Big Endian.
+
+Endianness can be a big issue if we are having a communication betwwen two different architectures throguh communication bus
+(I2C,SPI,UART e.t.c.) or with external peripherals, sensors, systems. In order to make two different systems with differing
+Endianness we can use a function called byte swap which can change the order of corresponding endianness i.e.
+
+For Converting 32 Bit Little Endian To 32 Bit Big Endian :
+
+void byte_swap32(uint32_t *ptr) {
+
+uint8_t i,temp_byte;
+
+for(int i=0; i<2; i++){
+temp_byte = *((uint8_t*)ptr+(3-i));
+*((uint8_t*)ptr + (3-i))= *((uint8_t*)ptr+i);
+*((uint8_t*)ptr+i)=temp_byte;
+}
+}
+
+
+void main(){
+uint32_t var = 0xABCD1234;
+uint32_t *ptr =&var;
+byte_swap(ptr);
+
+while(1);
+}
+
+We can configure above program for conversion from 16 Bits as well and also for converting from Big Endian to Little Endian, note we need to lenghth of data passed from pointer for that we use sizeof(*ptr);
+
+
+----------------Lec 7: Compiler Attributes---------------
+
+We can also align our memory alignments for byte,half-word,word,double word through compiler attributes.
+
+Compiler attributes give specific details on how to compile data for : variables, structures & Structure Memebers and Functions. However attributes are not a part of C standard and not portable to other compilers.
+
+
+
+__attribute__((packed)) : informing compiler not to do padding for aligning data of a struct in most cases.
+                          Inside Paranthesis insted of packed we can also have other attribute.  
+
+__attribute__((aligned(4))) : Aligned attribute specify memory alignment for data in the power of two : 2,4,8,16...
+
+                                                                   
+ 
+Example 1 : int8_t foo __attribute__((aligned(4))); informing compiler to define a word (32-Bits) 
+            size boundary for foo variable whoch otherwise had taken a bondary of byte size.
+            By boundary we mean memory locations provided to data type regardless of it´s original size.
+
+Example 2 : typedef struct {
+            int8_t var1;
+            int32_t var2;
+            int8_t var3;  
+            }str1;
+
+Now if we do alignment of structure members to occupy a boundary of word in memory as : 
+            typedef struct {
+            int8_t var1__attribute__((aligned(4)));  
+            int32_t var2__attribute__((aligned(4)));
+            int8_t var3__attribute__((aligned(4)));  
+            }str1;
+           
+Now structure memebrs will be occupying 12 Bytes (truncated to 16 Bytes) instead of 6 bytes in memory before alignment. 
+
+We can also do alignment on entire structure as :            
+            typedef struct {
+            int8_t var1;  
+            int32_t var2;
+            int8_t var3;
+            }str1__attribute__((aligned));;
+
+Example 3 : To pack our entire strucutre in memory we apply packed attribute in entire structure,now our memory is not aligned
+            not efficient for CPU performance but effective for reducing memory consumption.
+
+            typedef struct {
+            int8_t var1;  
+            int32_t var2;
+            int8_t var3;
+            }str1__attribute__((packed));;
+
+__attribute__((always_inline)) : Informing compiler not to ignore inline keyword which we use at the time of function
+                                  definition i.e.
+Example 4: 
+__attribute__((always_inline)) inline int32_add (int32_t x,int32_y )
+                                 {
+                                 
+                                 } 
+inline keyword placed with function name informs the compiler to place function code at the
+calling section of code instead of doing context switching from caller to the function.
+
+inline keyword is a C99 feature not present in c89 standard.
+always_inline attribute is a GCC attribute not supported inother compilers. 
+
+-----Function Pragmas---------
+
+They provide special instructions to compiler and we can do it through
+  Push/Pop - Add/Remove extra option for compilation for a part of code.
+  Optimize - Specifies a certain level of optimization for block of code.
+
+Example : 
+#pragma GCC push
+#pragma GCC optimize ("O0") 
+int32_t add(int32_t x,int32_t y) 
+{
+return (x+y);
+}
+#pragma GCC pop  // Disabling use optimize function pragma
+
+
+If we are working in embedded teams with different compilers and architectures then gcc attributes will not be supported so
+to avoid compile time errors we do 
+   #ifndef(__GNUC__)          
+   #define__attribute__(x)  // This preprocessor directive will define as nothing for non GCC compilers 
+   #endif
+
+-------------Lec 8 : Memory Map and Registers--------------
+
+Memory Map Provides a memory address to physical device mapping with an address space for use in programming.
+Cortex M CPU Registers are not part of memory map can only be accessed through inline assembly instructions in our C Code.
+
+We use pointers to access memory map.
+
+A microcontroller can have following categories of memory registers : 
+Core CPU Registers,
+Internal Private Registers,
+External Private Regsiers,
+General Peripheral Memory Registers.
+
+Cortex M CPU Registers are : General Purpose Registers R0-R12,
+                             Special Purpose Registers R13 - R15(Link Register,Stack Pointer,Program Counter),
+                             
+Cortex M CPU Special Function Registers : Program Status Registers (APSR,IPSR,EPSR)
+                                          Exception Mask Registers (PRIMASK,FAULTMASK,BASEPRI).
+                                          Control Register.
+To Access special purpose registers assembly language instructions are : MRS r1,BASEPRI  (for reading)
+                                                                         MSR FAULTMASK,r0 (for writing)
+
+
+Program Status Register: Captures the current state of program and combines :-
+                         Application Program status Register (APSR) : Contains current state of condition flags from previous instruction.
+                         Interrupt Program Status Register (IPSR)  : Contains exception type number of current ISR.
+                         Exception Program Status Register(EPSR).            
+
+Control Register : Allows the processor to move in between privilege and non privileged state.
+
+     
+To access Timer TA0 Control Register with address 0x40000000 we do : volatile uint16_t * ta0_ctrl = (uint16_t*)0x40000000;
+        Writing a value to register to set it´s specific bit fields : *ta0_ctrl = 0x0202;
+
+
+------------------------------LEC 9 : Register efinition File-----------------------
+
+Register Definition Files are used to access peripheal registers as they contain addresses of these peripheral registers. These files are provided by chip vendors
+mostly and we are not required to develop it ourselves. We just need to develop external peripheral or sensor register definition file during our driver development.
+In both above scenarios we use #define preprocessor directive.
+
+Register defintion file provides a hardware abstraction to the embedded software developers.
+
+Register Definitio File : 
+Provides interface to Peripheral Memory by specifying : Address list for peripherals , 
+                          				Access Methods,
+							Defines for bit fields and Bit masks.
+
+Peripheral Access Methods are used to Read/Write Data : Direct Dereferencing of Memory,
+							Structure Overlays. 
+
+  
+
+-----------Memory Access Macros------------
+
+We can use pre processor directive #define to develop access methods without using hardcoded values for 8,16,32,64 bits of peripheral registers i.e.
+
+#define HWREG8(x)    (*((volatile uint8_t*)(x)))        // Here we are first casting address x that we will only need 8 bits of this location and later we are accessing this location
+                                                        // and can either read or assign a new value to it , hence we can access any peripheral register with address x.
+                                                        // vloatile keyword informing compiler to not do optimization. 
+#define HWREG16(x)   (*((volatile uint16_t*)(x)))
+#define HWREG32(x)   (*((volatile uint32_t*)(x)))
+
+#define TA0CTL       (HWREG16(0x40000000))             // Here we are passing peripheral register address 0x40000000 and can only 16 bits of it in our code i.e.
+
+Similarly for other registers we can do 
+
+#define TA0CCTL0      (HWREG16(0x40000002))            // Here we are passing peripheral register address 0x40000002 and can only 16 bits of it in our code i.e.
+#define TA0CCTL1      (HWREG16(0x40000004))
+#define TA0CCTL2      (HWREG16(0x40000006)) 
+#define TA0CCTL3      (HWREG16(0x40000008))
+#define TA0CCTL4      (HWREG16(0x4000000A))
+#define TA0R          (HWREG16(0x40000010))
+
+int main(){
+
+TA0CTL = 0x202;      // This line expands (HWREG16(0x40000000)) = 0x202 leading to assigning of value 0x202 to peripheral register but only 16b bits are altered.
+
+}
+
+To compile our code for different platforms with different peripheral registers with varying addresses we can introduce compile time switches for 
+appropriately including relevant include file according to the target architecture as : 
+
+#ifdef MSP432_VER1
+#include "MSP432_Version1.h"                // for one chipset with different peripheral register address
+#else
+#include "TM4C123G.h"                       // For another chipset with it´s own peripheral register addresses "
+
+#endif
+
+
+---------------Structure Overlay Macros---------------
+We use structure pointer and dereference it to access the indvividual registers.
+
+
+
+
+typedef struct {
+__IO uint16_t CTL;
+__IO uint16_t CCTL[7];
+__IO uint16_t R;
+__IO uint16_t CCR[7];
+__IO uint16_t EXO;
+uint16_t RESEVDO[6];
+__I uint16_t IV;
+}Timer_A_Type;
+
+#define PERIPH_BASE ((uint32_t)0x40000000)
+#define TIMER_A0_BASE (PERIPH_BASE + 0x000000)
+#define TIMER_A0 ((Timer_A_Type*)Timer_A0_BASE)
+#define __IO (volatile)
+#define __I (volatile const)
+
+int main(){
+
+TIMER_A0->CTL=0x0202;    // This macro line will expand into ((Timer_A_Type*)(PERIPH_BASE + 0x000000))---> ((Timer_A_Type*)((uint32_t)0x40000000 + 0x000000))-->CTL=0x202
+                                                                                                    Where we´ve casted address ((uint32_t)0x40000000 + 0x000000)) as 
+                                                                                                    struct address                                                                                                       
+}
+
+
+
+
+--------------------------------------------Week2 : Manipulating Memory---------------------------------------------
+ 
+We use bitwise operators to manipulate,change certain bits of memory and External Peripheral Registers.
+
+Toggle a bit means change it´s current state if it´s 1 then change it to 0 , if it´s 0 then change it to 1.
+
+Bit Masks : Constant expressions used to set,clear or toggle a specific set of bits.
+
+Instead of using constant numeric values in expressions like : 
+uint8_t foo
+foo |= 0x30 ; 
+
+We should use macros to make our code more readable i.e #define MASK1 (0x30)
+
+
+
+
+
+
