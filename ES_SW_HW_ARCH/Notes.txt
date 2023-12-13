@@ -425,6 +425,213 @@ foo |= 0x30 ;
 
 We should use macros to make our code more readable i.e #define MASK1 (0x30)
 
+In many cases the vendor may also provide pre made bit masks in register definition values for interfacing peripheral registers like : 
+
+#define BIT0 (uint16_t)(0x0001)
+
+
+----------Bit Bandedn Region --------------
+
+In ARM Only first One Mega Byte of peripheral and SRAM memory is bit banded meaning each bit has it´s own address and can be accessed through a pointer for read,modify operations.
+
+----------Lec 4: Creating Software Interfaces Of Hardware---------------
+HAL (Hardware Abstraction Layer ) is created to simplify application level programming, it acts like a
+API(Application Programming Interface) Enabling us to focus on our application instead of initializing a certain microcontroller peripheral,interface,functionality through it´s numerous registers.
+
+ARM CMSIS (Cortex Microcontroller System Interface) also provides us a similar interface with abstraction layer offering portability across its different architectures.
+
+Creation of a SW interface for our hardware involvs different solutions such as : 
+
+Register Definition File : Providing Interface to peripheral memory, Access Methods, Defines for Bit Fields and Bit Masks.
+                           Peripheral Methods we use to read/write data through macros, structure overlays and direct dereferencing of memory leads to single platform architecture.
+
+
+For writing a HAL Layer interface methods we use Macro Functions and Specialized C-Functions  for portability and readability.
+
+Macros can become complex and are not possible to be debugged as they are a part of preprocessor so we can use inline functions in the HAL layer but their too much use can also increase our code size
+as they will copy paste our function code at the calling statement.
+
+In line function solution : 
+
+Example
+__attribute__((always_inline)) static inline void__enable_irq(void){   // can be defined without static then it will not be private.
+                                                                       // here compiler is assuming all linkage is internal to the file where this function is defined.
+
+// function statements
+
+}
+
+---------------------Lec 5 : Advanced Pointers Use-----------------------
+
+Some other pointer types we´ve in C are void pointers, double pointers , restrict pointers.
+
+Void Pointers : Generic Pointers, point to a memory address, need to be casted to a type before dereferencing, pointer arithmetic can´t be performed, size of a void pointer is equal 
+                to the size of word of the architecture.
+
+
+Restrict Qualifier Pointer : Helps compiler to optimize memory interactions as it´s the only address pointing to location, Introduced in C99 Standard,
+                             Syntax : uint8_t * restrict ptr;
+
+
+
+Double Pointer : Pointer to a Pointer, Used to set value of a pointer.    uint8_t **dptr = &ptr1;         
+                 Single dereference accesses pointer address.             printf("Address Stread at Double Pointer = %p",*dptr);  
+                 Double dereference accesses pointer data.                printf("Valued Stored At Address Stored At Double Pointer = %x",**dptr;
+
+Example 1 : Copies of Pointers are made when passed into a function 
+
+typedef enum{
+RSP_TYPE_1 = 0,
+RSP_TYPE_2 = 1,
+}RSP_e;
+
+typedef struct {
+RSP_e rsp_stype;
+uint8_t data[4];
+}rsp1;
+
+int8_t create_rsp1 (rspl ** r_p ) {
+*r_p = (rspl *)malloc(sizeof(rsp1));    //Here we´ve changed address stored at double pointer r_p however address external to function remains unchanged
+
+if(*r_p == NULL) {
+return -1 ;
+}
+
+(*r_p)->rsp_type = RSP_TYPE_1;
+return 0;
+
+}
+
+
+
+Example 2 :      
+
+Memory Address    :        Values or Addresses
+0x10                           0x13
+0x11                           0xff
+0x12                           0x03
+0x13                           0x77
+
+
+uint8_t * ptr = (uint8_t*)0x10;         // Assigning Address 0x10 to ptr and reading 8 bits at that address
+
+uint8_t **dptr = &ptr;                  // Assigning Own Address Of Pointer ptr (it´s not 0x10) pointing to 0x10
+
+uint8_t *ptr2 = **dptr;                 // Assigning value (0x13) pointed by address stored at ptr *dptr = ptr = 0x10 ; **dptr = *(0x10) = 0x13 
+
+uint8_t foo = *ptr2;                    // It´s *(0x13) = 0x77
+ 
+
+Example 3 : 
+int main(){
+
+uint8_t a = 0x12;
+uint8_t *ptr1 = &a ;
+uint8_t **ptr2 = &ptr1;
+
+printf("Address of Variable a = %p \n",&a);
+
+printf("Address Of Pointer Ptr1 = %p \n",&ptr1);
+printf("Address  Stored At Pointer Ptr1 Memory Location %p = %p\n",&ptr1,*(&ptr1));
+
+printf("Address Stored In Pointer Ptr1 = %p \n",ptr1);
+
+
+printf("Double Pointer Ptr2 Address : %p  \n",&ptr2);
+printf("Double Pointer Memory Location %p Has Address Stored %p -----> %p -----> Value: %x \n",&ptr2,ptr2,*ptr2,**ptr2);
+
+return 0;
+}
+
+------------------Lec 6 : Function Pointers----------------------
+
+Function Pointer : Pointer that points to functions.
+                   Defined just like a function, Has : 
+                       Return Type.
+                       Function Paramters.     
+                       Pointer Name
+Dereferencing a function pointer will call a function.
+
+
+Function Pointer Declaration Syntax : 
+<type> (*<function_pointer_name>)(<parameters list>) = <function-address>;    // type = int,float ....    ,function_pointer_name = fptr, function address = &func_name;
+
+The type of function pointer is the return type of function pointed by function pointer.
+            paramters list are the values to be passed t othe function being pointed.
+
+Example : 1 
+
+uint8_t add(int a,int b){
+uint8_t sum = a+b;
+return sum;
+}
+
+int main(){
+int ret_sum;
+uint8_t(*fptr)(int,int);
+*fptr=&add;
+
+ret_sum=fptr(1,2);    //calling add function through function pointer very similar to if we had call´d add function as add(1,2);
+
+
+return 0;
+}
+
+Example 2 : We can also use typedef to create a new type used for creating function pointers i.e.
+
+typedef int(*fptr)(int a,int b);
+
+fptr_TYPE fptr1 = &foo;
+fptr_type fptr2 = &bar;
+
+Example 3 :  We can also have an array of function pointers as :
+
+typedef int (*fptr_t[2])(int a,int b)
+
+fptr_t example = 
+{
+foo,
+baa
+};
+
+to call or invoke function pointers in array we do : 
+
+example[1]();   // Calling foo function pointer function, Where in brackets () we can also pass paramters.
+example[2]();   // Calling baa function pointer function,
+
+----------------------Lec 7 : Debugging a Microcontroller------------------------
+
+Debug symbols should be enabled at compile time by -g flag of compiler in order for debugger to work properly.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
