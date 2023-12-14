@@ -44,6 +44,7 @@ uint_least8_t,uint_least16_t,uint_least32_t,uint_least64_t,
 int_least8_t,int_least16_t,int_least32_t,int_least64_t,       least types indicate that at least specific n bits should be   
                                                               assigned to the type.
 
+Bool data type is introduced in C99 
 We can also use typedef keyword to crete our own custom type names.
 
 
@@ -323,7 +324,7 @@ To access Timer TA0 Control Register with address 0x40000000 we do : volatile ui
         Writing a value to register to set it´s specific bit fields : *ta0_ctrl = 0x0202;
 
 
-------------------------------LEC 9 : Register efinition File-----------------------
+------------------------------LEC 9 : Register Definition File-----------------------
 
 Register Definition Files are used to access peripheal registers as they contain addresses of these peripheral registers. These files are provided by chip vendors
 mostly and we are not required to develop it ourselves. We just need to develop external peripheral or sensor register definition file during our driver development.
@@ -331,7 +332,7 @@ In both above scenarios we use #define preprocessor directive.
 
 Register defintion file provides a hardware abstraction to the embedded software developers.
 
-Register Definitio File : 
+Register Definition File : 
 Provides interface to Peripheral Memory by specifying : Address list for peripherals , 
                           				Access Methods,
 							Defines for bit fields and Bit masks.
@@ -606,32 +607,220 @@ Debug symbols should be enabled at compile time by -g flag of compiler in order 
 
 
 
+-------------------------------Week 3 : Designing Embedded Data Structures-----------------------
 
 
 
 
+-----------------Lec 1 ------------------- 
+
+
+Structures allow us to create our own types made of : Standard C Types , Derived types, Enumerated Types e.t.c.
+Data Strucutres help us to manage data.
+
+C programming has four derived types : Pointers, Arrays, Structures, Unions.
+
+
+---------------Lec 2 : Enumerations----------------
+
+Enumerations are a alternative to #defines and const type qualifiers , Enumerations are a enumerated integer only data type.
+Enumerations allows us to assign names to constant values and enable us to do type checking at compile time, not possible using #define. 
+Enumerations can have default values assigned by  compiler or we can assign them.
+Enumerations does not reserve memory , only declared enumerated type takes memory.
+Enumerations are especially useful for assigning error & status codes. 
+
+Enumerated Member item type assigned value size is normally equal to unsigned int or signed int, Multiple implementations may exist according to ABI´s .
+Enum member item names have a global scope so we should not have two enumerations with same member enum item name.
+Enums can also be used to index an array.
+Enum sizes can also be optimized using gcc compiler flag -fshort-enums   // Where instead of short we could have specified anyother type whose size we intend to assign.
+
+Syntax : 
+enum <enum_type> {
+<enum_name> = <enum_value>,
+<enum_name> = <enum_value>,
+<enum_name>,
+// More enumerations
+};
+
+Example 1 : 
+
+enum month {
+JANUARY = 1,
+FEBRUARY = 2,
+MARCH = 3,
+APRIL = 4,
+MAY = 5,
+JUNE = 6,
+JULY = 7,
+AUGUST = 8,
+SEPTEMBER = 9,
+OCTOBER = 10,
+NOVEMBER = 11,
+DECEMBER = 12
+};
+
+enum month m;    // Where sizeof(m) = 
+
+
+Example 2 : 
+
+if(m==JANUARY)
+{ 
+printf(" First Month : ");
+}
+
+Example 2 :
+typedef enum {
+NO_ERROR = 1,
+POWER_ERROR = 2,
+BUS_ERROR
+}Error_e;
+
+Error_e error ;   // Now we can enumerate on entire enumerated list through a for loop and make comparisons using if statements.
 
 
 
+---------------------------Lec 3 : Unions-----------------------
+
+Unions are a derived data type containing multiple data members (structs,variables,pointers e.t.c.) of different sizes occupying the same address. 
+Size of a union is equal to largest member.
+Unios are regularly in header file (core_cm4.h) of ARM CMSIS Interface .
+We may use unions as a shared memory resource in Multithreaded application , this shared memory resource can be allocated through linker script as well rather
+than dynamically allocating and deallocating memory using malloc.
 
 
+Syntax : union <umion_type> {
+         <type> <name>;
+         <type> <name>; 
+        };
+
+Example 1 :     typedef union {
+                uint8_t x;
+                uint8_t y;     
+                uint8_t z;
+                } ex1;
+             
+               ex1 point;
+              point.x = 1;      //now all members have same value of 1.
+
+Example 2 :  
+             typedef struct {
+             uint8_t x;
+             uint8_t y;
+             uint8_t z;
+             }Str1_t;
+ 
+             typedef struct {
+             uint32_t x;
+             uint32_t y;
+             uint32_t z;
+             } Str2_t;
+
+            typedef union {
+            Str1_t s1;
+            Str2_t s2;
+            }ex3_t;
+
+            ex3.s1.x = 0x12; 
+            ex3.s2.y = 0x1567;
+
+------------------------------Lec 4 : Structures and Encapsulation------------------
 
 
+Structures require to be decalred with struct keyword.
+Each structure requires a unique name.
+A structure has list of members.
+We can place our strucutre in a header file or in implementation file depending upon our requirement.
+Structures can contain basic types(bool,char,int,float,double) , derived types(enum,pointers,functions,other structures).
+We can also use typedef similar to union to create our own types.
+Same rules of type qualifiers static,const similar to variables also apply here.
+We can also have struct pointers and an array of structure pointers in both cases a struct pointer points to a structure.
+
+Syntax : struct <STRUCT-NAME> {
+         <TYPE_NAME> <MEMBER-NAME>;
+         <TYPE_NAME> <MEMBER_NAME>;
+         };    
+         
+Example 1 : struct WeatherSample{ 
+           float temp;
+           uint8_t wind_s;
+           uint8_t wind_d;
+           uint16_t humidity;
+           uint8_t sun;
+           time_t;
+           }
+
+          struct WeatherSample S1;
+          S1.temp = val; 
+ 
+Example 2 : typedef struct{ 
+           float temp;
+           uint8_t wind_s;
+           uint8_t wind_d;
+           uint16_t humidity;
+           uint8_t sun;
+           time_t;
+           }WeatherSample_t;
+
+        WeatherSample_t ws1;
+        WeatherSample_t *sptr;
+        WeatherSample_t s_a[10];     // An array of WeatherSample_t structures.
+        ws1.temp = val;   
+
+Structure Encapsulation is just based upon read/write operation on it´s members through functions either containing that struct pointer in it´s body or having struct pointer passed as a paramter to it.  For Example : 
+
+       void gather_sample(WeatherSample **w);
+
+       float get_temp(WeatherSample *w);
+       uint8_t get_humidity(WeatherSample *w);
+       time_t get_time(WeatherSample *w);
+       void print_weather(WeatherSample *w);
+
+               
+Composite Data Structures : Structures defined using only built-in C-types and/or other composite data types
+Abstract Data Structures : Structures that can be applied to any number of applications. 
+                            Need to define structure and interface methods allowing : Addition Of New Data,
+                      								      Removing Data,
+										      Initializing a Structure
+										      Clearing a Structure.	
+
+                          Examples Of Abstract Data Structres : Linked Lists (Single,Double,Circular),
+                                                                Stack (FIFO,LIFO,Circular),
+                                                                Trees (Binary,Binary Search),
+                                                                Hash Table. 
+ 
+---------------------------------Lec 5: Bit Fields-------------------------------------
+
+Bit fiels allow us to calculate read, write data within a union or struct that is smaller than a byte.
+We just use a colon : after struct or union name to assign specific number of bits.
+
+Example 1 : 
+          struct <name>{
+          uint32_t w:BITSIZE;
+          uint32_t x:BITSIZE;
+          uint32_t y:BITSIZE;
+          uint32_t z:BITSIZE;
+};
 
 
+If we have bit field struct members of the same type then they will be packed at the same memory location until they cannot fit in and we can later on 
+access these member bits as well and perform read/write operation as well without affecting each one of their bits. 
+
+Bit Field concept is similar to packing of data as bit fields pack one bit right after another until type size is met or exceeded.
+
+Reading/Writing Bit fields implicitly use bit manipulation operations leading to reduction in execution efficiency, increasing our storage efficiency.
+
+We can try to mitigate above problem of alignment by adding a dummy bit field forcing a particular alignment i.e. Using :o with no bit limit.
+
+Example 2 : struct example6 { 
+            uint32_t x:16;
+            uint32_t y:4;
+            uint32_t :0;
+            uint32_t z:10;
+            };
 
 
-
-
-
-
-
-
-
-
-
-
-
+--------------------------------------Lec 6: LIFO Buffer-----------------------------------------
 
 
 
