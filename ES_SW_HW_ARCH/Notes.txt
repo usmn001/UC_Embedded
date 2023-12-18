@@ -431,7 +431,7 @@ In many cases the vendor may also provide pre made bit masks in register definit
 #define BIT0 (uint16_t)(0x0001)
 
 
-----------Bit Bandedn Region --------------
+----------Bit Banded Region --------------
 
 In ARM Only first One Mega Byte of peripheral and SRAM memory is bit banded meaning each bit has it´s own address and can be accessed through a pointer for read,modify operations.
 
@@ -580,10 +580,10 @@ return 0;
 
 Example 2 : We can also use typedef to create a new type used for creating function pointers i.e.
 
-typedef int(*fptr)(int a,int b);
+typedef int(*fptr_TYPE)(int a,int b);
 
 fptr_TYPE fptr1 = &foo;
-fptr_type fptr2 = &bar;
+fptr_TYPE fptr2 = &bar;
 
 Example 3 :  We can also have an array of function pointers as :
 
@@ -820,7 +820,242 @@ Example 2 : struct example6 {
             };
 
 
---------------------------------------Lec 6: LIFO Buffer-----------------------------------------
+---------------------Lec 6: LIFO Buffer---------------------------------
+
+LIFO Buffer is a memory allocated either on heap or in a array. 
+This ia contigous memory consisting of memory locations.
+LIFO Buffer is used to solve the problem of synchronization between two processes communicating with each other at different exectuion speed ( Producer, Consumer ).
+
+
+LIFO Buffer requires parameters to interact with that and they are : starting memory location (base address, *base_ptr), next memory location pointed address(*head_ptr), buffer length
+                                                                     specifying number of memory locations.
+
+Struct , Methods,  Functions Required : LB_Status LIFO_Is_Buf_Full(LIFO_BUF_t * lbuf);
+                                        LB_Status LIFO_Add_Item (LIFO_Buf_t * lbuf,uint8_t item);
+                                        <return_type> * create_buffer( <type> *ptr,<type> length ); // Here return type is the type of base pointer.
+                                        // We may also include item remove function
+
+typedef enum {        // STATUS CODES OF LIFO BUFFER STATUSES 
+LB_NO_ERROR = 0,
+LB_FULL,
+LB_NOT_FULL,
+LB_EMPTY,
+LB_NOT_EMPTY,
+LB_NULL,
+}LB_Status;
+
+typedef struct {
+<type> length;         // Size of the LIFO Buffer
+<type> *base;          // Pointer Pointing to the starting memory location address
+<type> *head;          // Pointer Pointing to next memory location address
+}LIFO_BUF_t;
+
+LB_Status LIFO_Is_Buf_Full(LIFO_BUF_t  lbuf)
+{
+
+if( !lbuf.head || !lbuf.base ) 
+{
+return LB_NULL; 
+}
+
+if(lbuf.head == (lbuf.base+lbuf.length))
+{
+return LB_FULL;
+}
+
+else
+return LB_NOT_FULL;
+}
+
+LB_Status LIFO_Add_Item (LIFO_BUF_t lbuf,uint8_t item) // This iteam can also be a struct or union, for that we will need to cast
+                                                         // malloc pointer accordingly
+{
+
+if( LIFO_Is_Buf_Full(lbuf)!=LB_FULL)
+{
+*(lbuf.head) = item;
+lbuf.head++;
+return LB_NO_ERROR;
+}
+
+}
+
+
+
+<return_type> * create_buffer( <type> *ptr,<type> length ) {
+ptr->base = <type*>malloc(sizeof(length));   // Here we could have also used arrays instead of heap depending upon requirement.
+return ptr;
+}
+
+
+------------------------Lec 9 : Circular Buffer-------------------------
+
+Buffers can be implemented in Hardware or Software.
+     They help in transmitting lots of data in our out of an interface (e.g.UART).
+
+Circular buffer is also known as Ring Buffer and is a example of FIFO(First in First Out) Buffer.
+     Created with a contigous block of memory.
+Circular Buffer adds data to one end (Head).   ( Head is a pointer ).
+Circular Buffer removes data items from the end (Tail).  ( Tail is a pointer).
+Like LIFO  Circular Buffer Can also be implemented either through arrays or heap more generally.
+
+
+In a circular buffer :- Head pointer either points to next memory empty location or current occupied memory location depending upon implementation.
+                        Tail Pointer Points to last occupied memory location.
+                                                                                               
+
+The head will continue to grow in one direction until it has reached end of allocated region. 
+If more data get´s added beyond the capacity of buffer, head will move back to begining of buffer i.e. it´s base address.
+     
+
+
+
+
+------Functions For Interfacing , Creating Circular Buffer----------------
+
+// Circular Buffer Structure : 
+
+typedef struct
+{
+uint8_t * Base;
+uint8_t * Tail;
+uint8_t * Head;
+uint8_t Length;
+uint8_t Count;
+}CB_t;
+
+typedef enum {        // STATUS CODES OF LIFO BUFFER STATUSES 
+CB_NO_ERROR = 0,
+CB_FULL,
+CB_NOT_FULL,
+CB_EMPTY,
+CB_NOT_EMPTY,
+CB_NULL,
+}CB_Status;  
+
+<return_type> * create_buffer( <type> *ptr,<type> length ) {
+ptr->base = <type*>malloc(sizeof(length));   // Here we could have also used arrays instead of heap depending upon requirement.
+return ptr;
+}
+
+
+CB_Status LIFO_Is_Buf_Full(CB_t  cbuf)   // Function Checking Status Of Buffer
+{
+
+if( ! cbuf->head || ! cbuf->tail || ! cbuf->base ) // Checking to make sure pointers are not NULL
+{
+return CB_NULL; 
+}
+
+if(cbuf.tail == (cbuf.head+1) || cbuf.head == cbuf.tail + (cbuf.length-1)    ) // 1st Condition Checking If tail address is ahead of head pointer address 
+{                                                                              // 2nd Condition Checking If Head Address is last address of Buffer and is equal to sum of tail address is last address of buffer and head address is 
+                                                                                  at start.
+return CB_FULL;
+}
+
+else
+return CB_NOT_FULL;
+}
+
+
+CB_Status CB_Add_Item (CB_t * cbuf, uint8_t item) 
+{
+if( ! cbuf->head || ! cbuf->tail || ! cbuf->base ) // Checking to make sure pointers are not NULL
+{
+return CB_NULL; 
+}
+
+if(LIFO_Is_Buf_Full(cbuf)==CB_FULL){
+return CB_FULL;
+}
+
+*(cbuf.head)=item;
+
+if(cbuf.head == cbuf.base+(cbuf.length)-1) 
+{
+cbuf->head = cbuf->base ;
+}
+else {
+cbuf->head ++;
+}
+return CB_NO_ERRORS;
+}
+
+
+------------------------------Lec 10 : Linked List------------------------------
+
+Linked list allow us to create a scattered data strucutre that can be allocated to random locations in memory but still in linear order. 
+
+--------------Linked List Data Structure--------------
+
+Comprised of many nodes they are : Independently allocated (On Heap or Stack or other memroy) , Linked to other nodes.
+
+Singly Linked List :    1st Node points to 2nd Node 
+                        2nd Node Points to 3rd Node. 
+                        3rd Node Points to N Node.
+                        Must keep track of head node. 
+                        Cannot travel backwards ( As we can only search linked list from tail to head as we only have one pointer storing address of noext node)
+                                                ( Singly linked list is also called forward linked list ) 
+
+
+Doubly Linked List :    Can track any node.
+                        Can travel forwards and backwards. 
+                        Has address of next node and of previous node so it has two pointers in it´s data struct.
+
+
+In Linked list tail node next pointer points to null.
+If linked list is empty head node is null or isn´t even allocated.    
+
+Node Structure : struct nod
+
+                 typedef struct node{
+                 uint8_t item;
+                 struct node *next;    // 32 bit pointer address in 32 bit architecture pointing to next node in linked list.
+
+                 }Node_t;  
+
+One disadvantage of linked list is that we need to store every node 32 bit address in a node´s data strucutre.
+
+Linked list nodes are added and removed thorughout lifetime of the program.
+Linked list size grows and shrinks. 
+     To add a node in list we need a method/function called append or insert.
+     To remove a node from list we need a method/function called remove or freenode.
+
+Here we are considering head node as the first node in list and tail as the last node in list.
+To deallocated heap memory in Linked list we will need to track of head node , if we don´t then we have memory leak issue.
+
+Function For Adding A Node To the End Of List i.e. Last Node ( Tail )
+
+void LL_append (Node_t *node,uint32_t data){             
+
+Node_t * nn = node;
+if(node==NULL) {return ;}  			  // Checking if node was assigned or not heap memory address.
+
+if(node->next == NULL)                            // Checking if current node is tail (last node)
+{
+node->next = (Node_t*)malloc( sizeof(Node_t) );   // If it´s last node then we are updating its next pointer with address of node allocated memory on heap
+nn=node->next;                                    // Making newly added node as current tail (Last ) node
+}
+else{
+while(nn->next!=NULL){                            // Traversing the entire list to check for tail (Last Node)
+nn=nn->next;
+}
+nn->next = (Node_t*)malloc(sizeof(Node_t));       // If it´s last node then we are updating its next pointer with address of node allocated memory on heap
+nn=node->next;                                    // Making newly added node as current tail (Last ) node
+} 
+}
+nn->data = data;                                  // Appending data to the tail node in list.
+nn->next = NULL;                                  // Making Newly Appended Node As Tail Node by making it´s next pointer to point to NULL.
+
+}
+  
+
+
+
+
+
+
+
 
 
 
