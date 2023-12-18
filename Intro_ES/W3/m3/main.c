@@ -41,7 +41,8 @@ int main()                                          // main : Code, .text , Read
   {
     return -1;
   }
-
+uint_fast8_t  a = 0;
+uchar8_t b =1;
   for( l1 = 0; l1 < g2; l3++)
   {
     g1 = func(l2);
