@@ -489,7 +489,7 @@ RSP_TYPE_2 = 1,
 typedef struct {
 RSP_e rsp_stype;
 uint8_t data[4];
-}rsp1;
+}rspl;
 
 int8_t create_rsp1 (rspl ** r_p ) {
 *r_p = (rspl *)malloc(sizeof(rsp1));    //Here we´ve changed address stored at double pointer r_p however address external to function remains unchanged
